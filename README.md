@@ -12,7 +12,7 @@
 - NodeJS
 
 ### Backend:
-- Python 3.14
+- Python 3.13
 - FastAPI
 - SQLite
 
