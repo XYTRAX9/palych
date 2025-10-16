@@ -1,11 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-import sys
-import os
-from database.models import Base
 from database.models_techcard import BaseTechCard
+from database.dependencies import engine_techcard
+from routers.techcard_router import router as techcard_router
+from routers.dictionaries_router import router as dictionaries_router
 
 # Создаём приложение FastAPI
 app = FastAPI()
@@ -19,45 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Получаем абсолютный путь к папке database
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_DIR = os.path.join(BASE_DIR, 'database')
-
-# ========== ПОДКЛЮЧЕНИЕ К ОСНОВНОЙ БД (databaseforbros.db) ==========
-main_db_path = os.path.join(DATABASE_DIR, 'databaseforbros.db')
-engine_main = create_engine(f'sqlite:///{main_db_path}', echo=True)
-SessionMainDB = sessionmaker(bind=engine_main)
-
-# ========== ПОДКЛЮЧЕНИЕ К БД ТЕХКАРТ (techcards.db) ==========
-techcard_db_path = os.path.join(DATABASE_DIR, 'techcards.db')
-engine_techcard = create_engine(f'sqlite:///{techcard_db_path}', echo=True)
-SessionTechCardDB = sessionmaker(bind=engine_techcard)
-
 # Создаём таблицы в БД техкарт (если их ещё нет)
 BaseTechCard.metadata.create_all(bind=engine_techcard)
 
+# Подключаем роутеры
+app.include_router(techcard_router)
+app.include_router(dictionaries_router)
 
-# ========== ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ СЕССИЙ БД ==========
-
-# Получение сессии основной БД
-async def get_main_db():
-    db = SessionMainDB()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# Получение сессии БД техкарт
-async def get_techcard_db():
-    db = SessionTechCardDB()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# ========== ТЕСТОВЫЙ ENDPOINT ==========
+# Тестовый эндпоинт
 @app.get("/")
 async def root():
     return {"message": "API для генератора технологических карт работает!"}

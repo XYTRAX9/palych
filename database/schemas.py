@@ -11,7 +11,7 @@ class GroupResponse(BaseModel):
     group_name: Optional[str]
 
     class Config:
-        from_attributes = True  # Для совместимости с SQLAlchemy моделями
+        from_attributes = True
 
 
 # Схема для предмета
@@ -53,8 +53,8 @@ class SkillsKnowledgeResponse(BaseModel):
 
 # ========== СХЕМЫ ДЛЯ ЭТАПОВ УРОКА ==========
 
-# Схема для создания этапа урока
-class TechCardStageCreate(BaseModel):
+# Схема для этапа урока (используется внутри техкарты)
+class TechCardStageData(BaseModel):
     nomer_etapa: int  # Номер этапа
     nazvanie_etapa: str  # Название этапа
     cel_etapa: Optional[str] = None  # Цель этапа
@@ -64,8 +64,8 @@ class TechCardStageCreate(BaseModel):
     formiruemye_kompetencii: Optional[str] = None  # Формируемые компетенции
 
 
-# Схема для ответа с этапом урока
-class TechCardStageResponse(TechCardStageCreate):
+# Схема для ответа с этапом урока (включает id из БД)
+class TechCardStageResponse(TechCardStageData):
     id: int
     tech_card_id: int
 
@@ -75,8 +75,8 @@ class TechCardStageResponse(TechCardStageCreate):
 
 # ========== СХЕМЫ ДЛЯ ТЕХНОЛОГИЧЕСКОЙ КАРТЫ ==========
 
-# Схема для создания техкарты
-class TechCardCreate(BaseModel):
+# Схема для сохранения/обновления техкарты
+class TechCardUpdate(BaseModel):
     # ID из справочников
     group_id: Optional[int] = None
     lesson_id: Optional[int] = None
@@ -99,30 +99,26 @@ class TechCardCreate(BaseModel):
     istochniki: Optional[str] = None
 
     # Список этапов урока
-    stages: List[TechCardStageCreate] = []
+    stages: List[TechCardStageData] = []
 
 
-# Схема для ответа с техкартой
+# Схема для ответа с техкартой (полные данные)
 class TechCardResponse(BaseModel):
     id: int
     group_id: Optional[int]
     lesson_id: Optional[int]
     teacher_id: Optional[int]
     lesson_type_id: Optional[int]
-
     tema: str
     nomer_zanyatiya: Optional[str]
     ped_tech: Optional[str]
     cel_zanyatiya: Optional[str]
-
     zadachi_obuch: Optional[str]
     zadachi_razv: Optional[str]
     zadachi_vosp: Optional[str]
-
     prognoz_result: Optional[str]
     oborudovanie: Optional[str]
     istochniki: Optional[str]
-
     stages: List[TechCardStageResponse] = []
 
     class Config:
