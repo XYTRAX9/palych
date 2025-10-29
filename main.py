@@ -24,6 +24,7 @@ BaseTechCard.metadata.create_all(bind=engine_techcard)
 app.include_router(techcard_router)
 app.include_router(dictionaries_router)
 
+
 # Тестовый эндпоинт
 @app.get("/")
 async def root():
