@@ -2,17 +2,18 @@ from sqlalchemy import Column, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
-# Создаём базовый класс для всех моделей (ОДИН РАЗ!)
+# ========== СОЗДАНИЕ БАЗОВОГО КЛАССА ==========
 Base = declarative_base()
 
+
+# ==================== СПРАВОЧНИКИ ====================
 
 # ========== ТАБЛИЦА: group_name (Группы) ==========
 class Group(Base):
     __tablename__ = "group_name"
 
     primary_key = Column(Integer, primary_key=True, index=True)
-    curator_group = Column(Text, nullable=True)  # Куратор группы
-    group_name = Column(Text, nullable=True)  # Название группы
+    group_name = Column(Text, nullable=True)
 
 
 # ========== ТАБЛИЦА: name_teacher (Преподаватели) ==========
@@ -20,7 +21,7 @@ class Teacher(Base):
     __tablename__ = "name_teacher"
 
     primary_key = Column(Integer, primary_key=True, index=True)
-    full_name = Column(Text, nullable=False)  # ФИО преподавателя
+    full_name = Column(Text, nullable=False)
 
 
 # ========== ТАБЛИЦА: lesson_type (Типы уроков) ==========
@@ -28,67 +29,96 @@ class LessonType(Base):
     __tablename__ = "lesson_type"
 
     primary_key = Column(Integer, primary_key=True, index=True)
-    lesson_type = Column(Text, nullable=False)  # Тип урока (лекция, практика и т.д.)
+    lesson_type = Column(Text, nullable=False)
 
 
-# ========== ТАБЛИЦА: lesson (Предметы с привязками) ==========
-# ВАЖНО: Эта таблица связывает предмет, преподавателя, группу и тип урока!
+# ========== ТАБЛИЦА: lesson (Предметы) ==========
 class Lesson(Base):
     __tablename__ = "lesson"
 
     primary_key = Column(Integer, primary_key=True, index=True)
-    name_lesson = Column(Text, nullable=False)  # Название предмета
-
-    # Внешние ключи (связи с другими таблицами)
-    Teacher = Column(Integer, ForeignKey("name_teacher.primary_key"), nullable=True)  # ID преподавателя
-    Group_name = Column(Integer, ForeignKey("group_name.primary_key"), nullable=True)  # ID группы
-    type_lesson = Column(Integer, ForeignKey("lesson_type.primary_key"), nullable=True)  # ID типа урока
-
-    # SQLAlchemy relationship для удобного доступа к связанным объектам
-    # Например: lesson.teacher_rel.full_name вместо запроса в БД
-    teacher_rel = relationship("Teacher", foreign_keys=[Teacher])
-    group_rel = relationship("Group", foreign_keys=[Group_name])
-    type_rel = relationship("LessonType", foreign_keys=[type_lesson])
+    name_lesson = Column(Text, nullable=False)
 
 
-# ========== ТАБЛИЦА: learning_outcomes (Результаты обучения) ==========
-# Что студент должен знать и уметь после изучения предмета
+# ========== ТАБЛИЦА: profession (Профессии) ==========
+class Profession(Base):
+    __tablename__ = "profession"
+
+    primary_key = Column(Integer, primary_key=True, index=True)
+    profession = Column(Text, nullable=True)
+
+
+# ==================== КОМПЕТЕНЦИИ ====================
+
+# ========== ТАБЛИЦА: ok (Общие компетенции) ==========
+class OK(Base):
+    __tablename__ = "ok"
+
+    primary_key = Column(Integer, primary_key=True, index=True)
+    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)
+    general_comp = Column(Text, nullable=True)
+
+
+# ========== ТАБЛИЦА: pk (Профессиональные компетенции) ==========
+class PK(Base):
+    __tablename__ = "pk"
+
+    primary_key = Column(Integer, primary_key=True, index=True)
+    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)
+    prof_comp = Column(Text, nullable=True)
+
+
+# ==================== РЕЗУЛЬТАТЫ ОБУЧЕНИЯ И ЗНАНИЯ ====================
+
+# ========== ТАБЛИЦА: learning_outcomes ==========
 class LearningOutcome(Base):
     __tablename__ = "learning_outcomes"
 
     primary_key = Column(Integer, primary_key=True, index=True)
-    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)  # К какому предмету относится
-    skill = Column(Text, nullable=True)  # Что должен уметь
-    know = Column(Text, nullable=True)  # Что должен знать
+    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)
+    pk = Column(Integer, ForeignKey("pk.primary_key"), nullable=True)
+    ok = Column(Integer, ForeignKey("ok.primary_key"), nullable=True)
+    skills = Column(Integer, nullable=True)
+    know = Column(Integer, nullable=True)
 
 
-# ========== ТАБЛИЦА: lesson_topic (Темы предметов) ==========
-# Темы, которые изучаются в рамках предмета
+# ========== ТАБЛИЦА: lesson_topic ==========
 class LessonTopic(Base):
     __tablename__ = "lesson_topic"
 
     primary_key = Column(Integer, primary_key=True, index=True)
-    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)  # К какому предмету относится
-    topic = Column(Text, nullable=False)  # Название темы
+    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)
+    topic = Column(Text, nullable=False)
 
 
-# ========== ТАБЛИЦА: pk_and_ok (Компетенции) ==========
-# Профессиональные (ПК) и общие (ОК) компетенции по предмету
-class PkAndOk(Base):
-    __tablename__ = "pk_and_ok"
-
-    primary_key = Column(Integer, primary_key=True, index=True)
-    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)  # К какому предмету относится
-    prof_comp = Column(Text, nullable=True)  # Профессиональные компетенции (ПК)
-    general_comp = Column(Text, nullable=True)  # Общие компетенции (ОК)
-
-
-# ========== ТАБЛИЦА: skills_and_Knowledge (Знания и умения) ==========
-# Обновлённая версия таблицы с привязкой к предмету
+# ========== ТАБЛИЦА: skills_and_Knowledge ==========
 class SkillsKnowledge(Base):
     __tablename__ = "skills_and_Knowledge"
 
     primary_key = Column(Integer, primary_key=True, index=True)
-    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)  # К какому предмету относится
-    skill = Column(Text, nullable=True)  # Умения
-    knowledge = Column(Text, nullable=True)  # Знания
+    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=False)
+    skill = Column(Text, nullable=True)
+    knowledge = Column(Text, nullable=True)
+
+
+# ==================== ПРИЛОЖЕНИЯ ====================
+
+# ========== ТАБЛИЦА: applications ==========
+class Application(Base):
+    __tablename__ = "applications"
+
+    primary_key = Column(Integer, primary_key=True, index=True)
+    lesson = Column(Integer, ForeignKey("lesson.primary_key"), nullable=True)  # ВАЖНО: nullable=True!
+    name = Column(Text, nullable=True)
+    applications_tb = Column(Text, nullable=True)
+
+
+# ==================== ОТДЕЛЕНИЯ ====================
+
+# ========== ТАБЛИЦА: departments ==========
+class Department(Base):
+    __tablename__ = "departments"
+
+    primary_key = Column(Integer, primary_key=True, index=True)
+    teacher = Column(Integer, ForeignKey("name_teacher.primary_key"), nullable=False)
+    departments = Column(Text, nullable=True)
