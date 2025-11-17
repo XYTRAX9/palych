@@ -1,3 +1,5 @@
+# backend/routers/techcard_router.py
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse
@@ -7,73 +9,93 @@ from database.schemas import TechCardUpdate, TechCardResponse
 from database.dependencies import get_techcard_db, get_main_db
 from utils.docx_generator import generate_techcard_docx
 
-# Создаём роутер для техкарт
+# ✅ СНАЧАЛА создаём роутер (это ОБЯЗАТЕЛЬНО должно быть ДО декораторов!)
 router = APIRouter(
     prefix="/api/techcards",
     tags=["Технологические карты"]
 )
 
 
+# ✅ ТЕПЕРЬ можем использовать @router.put()
 @router.put("/{techcard_id}", response_model=TechCardResponse)
 def update_techcard(
-    techcard_id: int,
-    techcard_data: TechCardUpdate,
-    db: Session = Depends(get_techcard_db)
+        techcard_id: int,
+        techcard_data: TechCardUpdate,
+        db: Session = Depends(get_techcard_db)
 ):
     """
     Обновляет существующую технологическую карту или создаёт новую.
     """
-    # Ищем существующую техкарту
-    db_card = db.query(TechCard).filter(TechCard.id == techcard_id).first()
+    try:
+        # Ищем существующую техкарту
+        db_card = db.query(TechCard).filter(TechCard.id == techcard_id).first()
 
-    if not db_card:
-        # Создаём новую техкарту с указанным ID
-        db_card = TechCard(id=techcard_id)
-        db.add(db_card)
+        if not db_card:
+            # Создаём новую техкарту с указанным ID
+            db_card = TechCard(id=techcard_id)
+            db.add(db_card)
+            db.flush()  # ✅ Сохраняем новую карту сразу
 
-    # Обновляем данные
-    db_card.group_id = techcard_data.group_id
-    db_card.lesson_id = techcard_data.lesson_id
-    db_card.teacher_id = techcard_data.teacher_id
-    db_card.lesson_type_id = techcard_data.lesson_type_id
-    db_card.tema = techcard_data.tema
-    db_card.nomer_zanyatiya = techcard_data.nomer_zanyatiya
-    db_card.ped_tech = techcard_data.ped_tech
-    db_card.cel_zanyatiya = techcard_data.cel_zanyatiya
-    db_card.zadachi_obuch = techcard_data.zadachi_obuch
-    db_card.zadachi_razv = techcard_data.zadachi_razv
-    db_card.zadachi_vosp = techcard_data.zadachi_vosp
-    db_card.prognoz_result = techcard_data.prognoz_result
-    db_card.oborudovanie = techcard_data.oborudovanie
-    db_card.istochniki = techcard_data.istochniki
+        # Обновляем данные основной карты
+        db_card.group_id = techcard_data.group_id
+        db_card.lesson_id = techcard_data.lesson_id
+        db_card.teacher_id = techcard_data.teacher_id
+        db_card.lesson_type_id = techcard_data.lesson_type_id
+        db_card.tema = techcard_data.tema
+        db_card.nomer_zanyatiya = techcard_data.nomer_zanyatiya
+        db_card.ped_tech = techcard_data.ped_tech
+        db_card.cel_zanyatiya = techcard_data.cel_zanyatiya
+        db_card.zadachi_obuch = techcard_data.zadachi_obuch
+        db_card.zadachi_razv = techcard_data.zadachi_razv
+        db_card.zadachi_vosp = techcard_data.zadachi_vosp
+        db_card.prognoz_result = techcard_data.prognoz_result
+        db_card.oborudovanie = techcard_data.oborudovanie
+        db_card.istochniki = techcard_data.istochniki
 
-    # Удаляем старые этапы
-    db.query(TechCardStage).filter(TechCardStage.tech_card_id == techcard_id).delete()
+        # ✅ Применяем изменения основной карты
+        db.flush()
 
-    # Добавляем новые этапы
-    for stage_data in techcard_data.stages:
-        stage = TechCardStage(
-            tech_card_id=techcard_id,
-            nomer_etapa=stage_data.nomer_etapa,
-            nazvanie_etapa=stage_data.nazvanie_etapa,
-            cel_etapa=stage_data.cel_etapa,
-            dlitelnost=stage_data.dlitelnost,
-            deyatelnost_prepod=stage_data.deyatelnost_prepod,
-            deyatelnost_obuch=stage_data.deyatelnost_obuch,
-            formiruemye_kompetencii=stage_data.formiruemye_kompetencii
-        )
-        db.add(stage)
+        # Удаляем старые этапы
+        db.query(TechCardStage).filter(
+            TechCardStage.tech_card_id == techcard_id
+        ).delete(synchronize_session=False)
 
-    db.commit()
-    db.refresh(db_card)
+        # ✅ Применяем удаление
+        db.flush()
 
-    return db_card
+        # Добавляем новые этапы
+        for stage_data in techcard_data.stages:
+            stage = TechCardStage(
+                tech_card_id=techcard_id,
+                nomer_etapa=stage_data.nomer_etapa,
+                nazvanie_etapa=stage_data.nazvanie_etapa,
+                cel_etapa=stage_data.cel_etapa,
+                dlitelnost=stage_data.dlitelnost,
+                deyatelnost_prepod=stage_data.deyatelnost_prepod,
+                deyatelnost_obuch=stage_data.deyatelnost_obuch,
+                formiruemye_kompetencii=stage_data.formiruemye_kompetencii
+            )
+            db.add(stage)
+
+        # ✅ Сохраняем ВСЕ изменения
+        db.commit()
+
+        # ✅ Обновляем объект из БД
+        db.refresh(db_card)
+
+        return db_card
+
+    except Exception as e:
+        # ✅ При ошибке откатываем изменения
+        db.rollback()
+        print(f"Ошибка при обновлении техкарты: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка обновления: {str(e)}")
 
 
 @router.get("/download")
 def download_techcard(
-    db: Session = Depends(get_techcard_db),
-    main_db: Session = Depends(get_main_db)
+        db: Session = Depends(get_techcard_db),
+        main_db: Session = Depends(get_main_db)
 ):
     """
     Генерирует .docx файл из данных технологической карты и отдаёт его для скачивания.
