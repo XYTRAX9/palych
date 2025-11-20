@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './TechCardForm.css';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = "/api";
 
 function TechCardForm() {
     // ТОЛЬКО ИСПРАВЛЕНИЕ СВЯЗЕЙ - всё остальное как было
